@@ -22,9 +22,27 @@ export function useAuth() {
       .select('*')
       .eq('user_id', userId)
       .maybeSingle();
-    
+
     if (!error && data) {
       setProfile(data);
+      return;
+    }
+
+    // Ensure profile exists for anonymous/no-login flow
+    const { data: inserted, error: insertError } = await supabase
+      .from('profiles')
+      .upsert(
+        {
+          user_id: userId,
+          display_name: null,
+        },
+        { onConflict: 'user_id' }
+      )
+      .select()
+      .single();
+
+    if (!insertError && inserted) {
+      setProfile(inserted);
     }
   }, []);
 
@@ -80,18 +98,23 @@ export function useAuth() {
 
   const updateProfile = async (updates: { display_name?: string }) => {
     if (!user) return { error: new Error('Not authenticated') };
-    
+
     const { data, error } = await supabase
       .from('profiles')
-      .update(updates)
-      .eq('user_id', user.id)
+      .upsert(
+        {
+          user_id: user.id,
+          ...updates,
+        },
+        { onConflict: 'user_id' }
+      )
       .select()
       .single();
-    
+
     if (!error && data) {
       setProfile(data);
     }
-    
+
     return { data, error };
   };
 

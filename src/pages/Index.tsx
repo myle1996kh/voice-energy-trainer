@@ -11,16 +11,23 @@ import { RecordingWaveform } from '@/components/RecordingWaveform';
 import { useEnhancedAudioRecorder } from '@/hooks/useEnhancedAudioRecorder';
 import { useSentences } from '@/hooks/useSentences';
 import { useAuth } from '@/hooks/useAuth';
+import { useDisplayName } from '@/hooks/useDisplayName';
 import { usePracticeResults } from '@/hooks/usePracticeResults';
 import { useMetricSettings } from '@/hooks/useMetricSettings';
 import { analyzeAudioAsync, AnalysisResult } from '@/lib/audioAnalysis';
 import { FaceTrackingMetrics } from '@/hooks/useFaceTracking';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 
 type AppState = 'idle' | 'recording' | 'processing' | 'results';
 
 export default function Index() {
   const [appState, setAppState] = useState<AppState>('idle');
+  const [nicknameInput, setNicknameInput] = useState('');
+  const [showNicknameDialog, setShowNicknameDialog] = useState(false);
 
   // Sync metric settings on mount
   useMetricSettings();
@@ -31,7 +38,9 @@ export default function Index() {
   const [finalFaceMetrics, setFinalFaceMetrics] = useState<FaceTrackingMetrics | null>(null);
   const faceMetricsRef = useRef<FaceTrackingMetrics | null>(null);
 
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, profile, updateProfile } = useAuth();
+  const { displayName, setDisplayName } = useDisplayName();
+  const { toast } = useToast();
   const { saveResult } = usePracticeResults();
 
   const {
@@ -58,6 +67,15 @@ export default function Index() {
     getAudioLevel,
     getSpeechProbability
   } = useEnhancedAudioRecorder();
+
+  useEffect(() => {
+    if (authLoading) return;
+    const existingName = profile?.display_name?.trim() || displayName.trim();
+    setShowNicknameDialog(!existingName);
+    if (existingName && !nicknameInput) {
+      setNicknameInput(existingName);
+    }
+  }, [authLoading, profile?.display_name, displayName, nicknameInput]);
 
   // Update audio level and speech probability for visualization
   useEffect(() => {
@@ -154,6 +172,35 @@ export default function Index() {
       handleStartRecording();
     }
   }, [appState, isRecording, handleStartRecording, handleStopRecording]);
+
+  const handleSaveNickname = useCallback(async () => {
+    const trimmed = nicknameInput.trim();
+    if (!trimmed) {
+      toast({
+        variant: 'destructive',
+        title: 'Nickname required',
+        description: 'Please enter your nickname to continue.',
+      });
+      return;
+    }
+
+    setDisplayName(trimmed);
+    const { error } = await updateProfile({ display_name: trimmed });
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to save nickname',
+        description: error.message,
+      });
+      return;
+    }
+
+    toast({
+      title: 'Nickname saved',
+      description: `Welcome, ${trimmed}! Your progress will be saved.`,
+    });
+    setShowNicknameDialog(false);
+  }, [nicknameInput, setDisplayName, updateProfile, toast]);
 
   const recordingOverlay = isRecording && (
     <motion.div
@@ -375,5 +422,37 @@ export default function Index() {
     <AnimatePresence>
       {recordingOverlay}
     </AnimatePresence>
+
+    <Dialog open={showNicknameDialog}>
+      <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+        <DialogHeader>
+          <DialogTitle>Choose your nickname</DialogTitle>
+          <DialogDescription>
+            No login needed. Enter a nickname to save and track your training progress on this device.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="nickname">Nickname</Label>
+            <Input
+              id="nickname"
+              value={nicknameInput}
+              maxLength={30}
+              placeholder="e.g. Genshai"
+              onChange={(e) => setNicknameInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  void handleSaveNickname();
+                }
+              }}
+            />
+          </div>
+          <Button className="w-full" onClick={() => void handleSaveNickname()}>
+            Save nickname
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   </div>;
 };
