@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, ChevronLeft, ChevronRight, LogOut, User, BarChart3, Shield, Loader2 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Settings, ChevronLeft, ChevronRight, BarChart3, Shield } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { ResultsView } from '@/components/ResultsView';
 import { RecalibrationAlert } from '@/components/RecalibrationAlert';
@@ -11,18 +11,11 @@ import { RecordingWaveform } from '@/components/RecordingWaveform';
 import { useEnhancedAudioRecorder } from '@/hooks/useEnhancedAudioRecorder';
 import { useSentences } from '@/hooks/useSentences';
 import { useAuth } from '@/hooks/useAuth';
-import { useAdmin } from '@/hooks/useAdmin';
 import { usePracticeResults } from '@/hooks/usePracticeResults';
 import { useMetricSettings } from '@/hooks/useMetricSettings';
 import { analyzeAudioAsync, AnalysisResult } from '@/lib/audioAnalysis';
 import { FaceTrackingMetrics } from '@/hooks/useFaceTracking';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 
 type AppState = 'idle' | 'recording' | 'processing' | 'results';
 
@@ -38,9 +31,7 @@ export default function Index() {
   const [finalFaceMetrics, setFinalFaceMetrics] = useState<FaceTrackingMetrics | null>(null);
   const faceMetricsRef = useRef<FaceTrackingMetrics | null>(null);
 
-  const navigate = useNavigate();
-  const { user, profile, isAuthenticated, isLoading: authLoading, signOut } = useAuth();
-  const { isAdmin } = useAdmin();
+  const { isAuthenticated } = useAuth();
   const { saveResult } = usePracticeResults();
 
   const {
@@ -221,61 +212,27 @@ export default function Index() {
     </div>
 
     <div className="relative z-10 h-screen flex flex-col">
-      {/* Header with Settings and User Menu */}
+      {/* Header with quick actions */}
       <div className="flex items-center justify-between px-4 py-0">
         <Header />
         <div className="flex items-center gap-2">
-          {isAuthenticated ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <User className="w-5 h-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem disabled className="text-muted-foreground">
-                  {profile?.display_name || user?.email}
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/progress">
-                    <BarChart3 className="w-4 h-4 mr-2" />
-                    Progress
-                  </Link>
-                </DropdownMenuItem>
-                {isAdmin && (
-                  <DropdownMenuItem asChild>
-                    <Link to="/admin">
-                      <Shield className="w-4 h-4 mr-2" />
-                      Admin
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem asChild>
-                  <Link to="/settings">
-                    <Settings className="w-4 h-4 mr-2" />
-                    Settings
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => signOut()}>
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <>
-              <Link to="/auth">
-                <Button variant="ghost" size="sm">
-                  Sign in
-                </Button>
-              </Link>
-              <Link to="/settings">
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <Settings className="w-5 h-5" />
-                </Button>
-              </Link>
-            </>
-          )}
+          <Link to="/progress">
+            <Button variant="ghost" size="sm">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Progress
+            </Button>
+          </Link>
+          <Link to="/admin">
+            <Button variant="ghost" size="sm">
+              <Shield className="w-4 h-4 mr-2" />
+              Admin
+            </Button>
+          </Link>
+          <Link to="/settings">
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <Settings className="w-5 h-5" />
+            </Button>
+          </Link>
         </div>
       </div>
 

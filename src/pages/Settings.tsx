@@ -13,7 +13,7 @@ import { rebalanceWeights } from '@/lib/metricsUtils';
 const METRIC_LABELS: Record<string, { name: string; description: string; unit: string; color: string; category: 'audio' | 'video' }> = {
   // Audio metrics
   volume: { name: 'Energy (Volume)', description: 'Average loudness in dB', unit: 'dB', color: 'bg-blue-500', category: 'audio' },
-  speechRate: { name: 'Pace (Speech Rate)', description: 'Speed in words per minute', unit: 'WPM', color: 'bg-green-500', category: 'audio' },
+  speechRate: { name: 'Fluency (Speech Rate)', description: 'Speed in words per minute', unit: 'WPM', color: 'bg-green-500', category: 'audio' },
   acceleration: { name: 'Tonality (Acceleration)', description: 'Variation in speed and volume', unit: 'Score', color: 'bg-purple-500', category: 'audio' },
   responseTime: { name: 'Response Time', description: 'Time to start speaking', unit: 'ms', color: 'bg-yellow-500', category: 'audio' },
   pauseManagement: { name: 'Filler Words (Pauses)', description: 'Effective use of pauses', unit: 'Ratio', color: 'bg-orange-500', category: 'audio' },

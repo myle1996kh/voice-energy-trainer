@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -15,9 +15,7 @@ export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const initializedRef = useRef(false);
 
-  // Fetch user profile
   const fetchProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase
       .from('profiles')
@@ -43,16 +41,12 @@ export function useAuth() {
       setUser(nextSession?.user ?? null);
 
       if (nextSession?.user) {
-        // Defer profile fetch to avoid potential auth state change deadlocks
-        setTimeout(() => {
-          fetchProfile(nextSession.user.id);
-        }, 0);
+        setTimeout(() => fetchProfile(nextSession.user.id), 0);
       } else {
         setProfile(null);
       }
     });
 
-    // Single source of truth for initial auth resolution
     (async () => {
       const {
         data: { session: initialSession },
@@ -60,16 +54,21 @@ export function useAuth() {
 
       if (cancelled) return;
 
-      setSession(initialSession);
-      setUser(initialSession?.user ?? null);
+      let nextSession = initialSession;
+      if (!nextSession) {
+        const { data } = await supabase.auth.signInAnonymously();
+        nextSession = data.session ?? null;
+      }
 
-      if (initialSession?.user) {
-        await fetchProfile(initialSession.user.id);
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+
+      if (nextSession?.user) {
+        await fetchProfile(nextSession.user.id);
       } else {
         setProfile(null);
       }
 
-      initializedRef.current = true;
       setIsLoading(false);
     })();
 
@@ -78,37 +77,6 @@ export function useAuth() {
       subscription.unsubscribe();
     };
   }, [fetchProfile]);
-
-  const signUp = async (email: string, password: string, displayName?: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          display_name: displayName,
-        },
-      },
-    });
-    
-    return { data, error };
-  };
-
-  const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    return { data, error };
-  };
-
-  const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    return { error };
-  };
 
   const updateProfile = async (updates: { display_name?: string }) => {
     if (!user) return { error: new Error('Not authenticated') };
@@ -133,9 +101,6 @@ export function useAuth() {
     profile,
     isLoading,
     isAuthenticated: !!session?.user,
-    signUp,
-    signIn,
-    signOut,
     updateProfile,
     fetchProfile,
   };

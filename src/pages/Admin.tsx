@@ -1,49 +1,13 @@
-import { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, BookOpen, Users, Sliders } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowLeft, BookOpen, Users, Sliders } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth } from '@/hooks/useAuth';
-import { useAdmin } from '@/hooks/useAdmin';
-import { useToast } from '@/hooks/use-toast';
 import { LessonsTab } from '@/components/admin/LessonsTab';
 import { LearnersTab } from '@/components/admin/LearnersTab';
 import { MetricsTab } from '@/components/admin/MetricsTab';
 
 const Admin = () => {
-  const navigate = useNavigate();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const { isAdmin, isLoading: adminLoading } = useAdmin();
-  const { toast } = useToast();
-
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      navigate('/auth');
-    }
-  }, [isAuthenticated, authLoading, navigate]);
-
-  useEffect(() => {
-    if (!adminLoading && isAuthenticated && !isAdmin) {
-      toast({
-        title: 'Access Denied',
-        description: 'You do not have admin privileges.',
-        variant: 'destructive',
-      });
-      navigate('/');
-    }
-  }, [isAdmin, adminLoading, isAuthenticated, navigate, toast]);
-
-  if (authLoading || adminLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!isAdmin) return null;
-
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Background Effects */}
@@ -64,7 +28,7 @@ const Admin = () => {
               <ArrowLeft className="w-5 h-5" />
             </Button>
           </Link>
-          <h1 className="text-2xl font-bold">Admin Panel</h1>
+          <h1 className="text-2xl font-bold">Setup Panel</h1>
         </motion.div>
 
         {/* Tabs */}

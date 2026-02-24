@@ -12,15 +12,15 @@ import { CalibrationWizard } from '@/components/CalibrationWizard';
 import { CalibrationTest } from '@/components/CalibrationTest';
 
 const DEFAULT_METRICS: Omit<MetricSetting, 'id'>[] = [
-  { metric_id: 'volume', weight: 30, min_threshold: -35, ideal_threshold: -15, max_threshold: 0, method: null, enabled: true },
-  { metric_id: 'speechRate', weight: 30, min_threshold: 90, ideal_threshold: 150, max_threshold: 220, method: 'spectral-flux', enabled: true },
-  { metric_id: 'acceleration', weight: 5, min_threshold: 0, ideal_threshold: 50, max_threshold: 100, method: null, enabled: true },
-  { metric_id: 'responseTime', weight: 5, min_threshold: 2000, ideal_threshold: 200, max_threshold: 0, method: null, enabled: true },
-  { metric_id: 'pauseManagement', weight: 10, min_threshold: 0, ideal_threshold: 0, max_threshold: 2.71, method: null, enabled: true },
+  { metric_id: 'volume', weight: 50, min_threshold: -35, ideal_threshold: -15, max_threshold: 0, method: null, enabled: true },
+  { metric_id: 'speechRate', weight: 50, min_threshold: 90, ideal_threshold: 150, max_threshold: 220, method: 'deepgram-stt', enabled: true },
+  { metric_id: 'acceleration', weight: 0, min_threshold: 0, ideal_threshold: 50, max_threshold: 100, method: null, enabled: false },
+  { metric_id: 'responseTime', weight: 0, min_threshold: 2000, ideal_threshold: 200, max_threshold: 0, method: null, enabled: false },
+  { metric_id: 'pauseManagement', weight: 0, min_threshold: 0, ideal_threshold: 0, max_threshold: 2.71, method: null, enabled: false },
   // Video-based metrics
-  { metric_id: 'eyeContact', weight: 10, min_threshold: 0, ideal_threshold: 80, max_threshold: 100, method: 'percentage', enabled: true },
-  { metric_id: 'handMovement', weight: 5, min_threshold: 0, ideal_threshold: 50, max_threshold: 100, method: 'activity_score', enabled: true },
-  { metric_id: 'blinkRate', weight: 5, min_threshold: 10, ideal_threshold: 15, max_threshold: 25, method: 'count_per_minute', enabled: true },
+  { metric_id: 'eyeContact', weight: 0, min_threshold: 0, ideal_threshold: 80, max_threshold: 100, method: 'percentage', enabled: false },
+  { metric_id: 'handMovement', weight: 0, min_threshold: 0, ideal_threshold: 50, max_threshold: 100, method: 'activity_score', enabled: false },
+  { metric_id: 'blinkRate', weight: 0, min_threshold: 10, ideal_threshold: 15, max_threshold: 25, method: 'count_per_minute', enabled: false },
 ];
 
 const METRIC_LABELS: Record<string, { name: string; description: string; unit: string; color: string; category: 'audio' | 'video' }> = {
@@ -43,7 +43,7 @@ export const MetricsTab = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
-  const [allowUserCustomization, setAllowUserCustomization] = useState(false);
+  const [allowUserCustomization, setAllowUserCustomization] = useState(true);
 
   const fetchMetrics = useCallback(async () => {
     setIsLoading(true);
