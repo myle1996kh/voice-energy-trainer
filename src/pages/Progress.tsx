@@ -1,9 +1,10 @@
 import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trophy, Target, Clock, TrendingUp, Loader2, Flame, Volume2, Zap, Timer, Waves, ArrowUpRight, ArrowDownRight, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/hooks/useAuth';
 import { usePracticeResults, PracticeResult } from '@/hooks/usePracticeResults';
 import {
   LineChart,
@@ -140,16 +141,28 @@ function calculateImprovement(results: PracticeResult[]): { scoreDiff: number; s
 }
 
 const Progress = () => {
-  const { results, isLoading, fetchResults, stats } = usePracticeResults();
+  const navigate = useNavigate();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { results, isLoading, isLoadingStats, fetchResults, fetchStats, stats } = usePracticeResults();
   const [timeRange, setTimeRange] = useState<TimeRange>('14d');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [sessionsPage, setSessionsPage] = useState(0);
   const [selectedRadarMetrics, setSelectedRadarMetrics] = useState<string[]>([...ALL_RADAR_KEYS]);
 
   useEffect(() => {
-    const limit = timeRange === 'all' ? 1000 : timeRange === '30d' ? 500 : 200;
-    fetchResults(limit);
-  }, [fetchResults, timeRange]);
+    if (!authLoading && !isAuthenticated) {
+      navigate('/auth');
+    }
+  }, [isAuthenticated, authLoading, navigate]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Fetch enough results for the selected range
+      const limit = timeRange === 'all' ? 1000 : timeRange === '30d' ? 500 : 200;
+      fetchResults(limit);
+      fetchStats();
+    }
+  }, [isAuthenticated, fetchResults, fetchStats, timeRange]);
 
   const streak = useMemo(() => calculateStreak(results), [results]);
   const improvement = useMemo(() => calculateImprovement(results), [results]);
@@ -252,7 +265,7 @@ const Progress = () => {
     });
   };
 
-  if (isLoading) {
+  if (authLoading || isLoading || isLoadingStats) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

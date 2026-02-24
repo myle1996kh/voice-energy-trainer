@@ -1,4 +1,4 @@
-﻿-- Open setup access for authless Voice Energy Trainer mode
+-- Open setup access for authless Voice Energy Trainer mode
 -- Date: 2026-02-24
 
 -- Sentences: allow full management without admin role checks

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Settings, ChevronLeft, ChevronRight, LogOut, User, BarChart3, Shield, Loader2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { ResultsView } from '@/components/ResultsView';
 import { RecalibrationAlert } from '@/components/RecalibrationAlert';
@@ -10,14 +10,19 @@ import { RecordingWaveform } from '@/components/RecordingWaveform';
 
 import { useEnhancedAudioRecorder } from '@/hooks/useEnhancedAudioRecorder';
 import { useSentences } from '@/hooks/useSentences';
-import { useDisplayName } from '@/hooks/useDisplayName';
+import { useAuth } from '@/hooks/useAuth';
+import { useAdmin } from '@/hooks/useAdmin';
 import { usePracticeResults } from '@/hooks/usePracticeResults';
 import { useMetricSettings } from '@/hooks/useMetricSettings';
 import { analyzeAudioAsync, AnalysisResult } from '@/lib/audioAnalysis';
 import { FaceTrackingMetrics } from '@/hooks/useFaceTracking';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 type AppState = 'idle' | 'recording' | 'processing' | 'results';
 
@@ -33,8 +38,10 @@ export default function Index() {
   const [finalFaceMetrics, setFinalFaceMetrics] = useState<FaceTrackingMetrics | null>(null);
   const faceMetricsRef = useRef<FaceTrackingMetrics | null>(null);
 
+  const navigate = useNavigate();
+  const { user, profile, isAuthenticated, isLoading: authLoading, signOut } = useAuth();
+  const { isAdmin } = useAdmin();
   const { saveResult } = usePracticeResults();
-  const { displayName, setDisplayName, clearDisplayName, hasDisplayName } = useDisplayName();
 
   const {
     currentSentence,
@@ -89,13 +96,13 @@ export default function Index() {
         );
 
         // Save results to database if authenticated
-        if (analysisResults) {
+        if (isAuthenticated && analysisResults) {
           const videoMetrics = faceMetricsRef.current ? {
             eyeContactScore: faceMetricsRef.current.eyeContactScore,
             handMovementScore: faceMetricsRef.current.handMovementScore,
             blinkRate: faceMetricsRef.current.blinkRate,
           } : undefined;
-          await saveResult(displayName, analysisResults, currentSentence?.id || null, recordingTime, videoMetrics);
+          await saveResult(analysisResults, currentSentence?.id || null, recordingTime, videoMetrics);
         }
 
         setTimeout(() => {
@@ -105,7 +112,7 @@ export default function Index() {
       }
     };
     processAudio();
-  }, [audioBuffer, audioBlob, audioBase64, sampleRate, deviceId, deviceLabel, vadMetrics, sttWordCount, appState, displayName, saveResult, currentSentence, recordingTime]);
+  }, [audioBuffer, audioBlob, audioBase64, sampleRate, deviceId, deviceLabel, vadMetrics, sttWordCount, appState, isAuthenticated, saveResult, currentSentence, recordingTime]);
 
   const handleStartRecording = useCallback(async () => {
     setResults(null);
@@ -214,50 +221,61 @@ export default function Index() {
     </div>
 
     <div className="relative z-10 h-screen flex flex-col">
+      {/* Header with Settings and User Menu */}
       <div className="flex items-center justify-between px-4 py-0">
         <Header />
         <div className="flex items-center gap-2">
-          <Link to="/progress">
-            <Button variant="ghost" size="sm">
-              Progress
-            </Button>
-          </Link>
-          <Link to="/admin">
-            <Button variant="ghost" size="sm">
-              Setup
-            </Button>
-          </Link>
-          <Link to="/settings">
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Settings className="w-5 h-5" />
-            </Button>
-          </Link>
-        </div>
-      </div>
-      <div className="border-b border-border/60 bg-background/80 px-4 py-3">
-        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-          <div className="flex-1 space-y-1">
-            <div className="flex items-center justify-between gap-2">
-              <Label htmlFor="display-name" className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Display name (optional)
-              </Label>
-              {hasDisplayName && (
-                <Button variant="outline" size="xs" onClick={clearDisplayName}>
-                  Clear
+          {isAuthenticated ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <User className="w-5 h-5" />
                 </Button>
-              )}
-            </div>
-            <Input
-              id="display-name"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="E.g. Sam, Team Voice"
-              className="w-full bg-background/80"
-            />
-            <p className="text-[11px] text-muted-foreground">
-              Enter a display name to keep sessions on Supabase. Leave it blank to keep results local.
-            </p>
-          </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem disabled className="text-muted-foreground">
+                  {profile?.display_name || user?.email}
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/progress">
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                    Progress
+                  </Link>
+                </DropdownMenuItem>
+                {isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin">
+                      <Shield className="w-4 h-4 mr-2" />
+                      Admin
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem asChild>
+                  <Link to="/settings">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Settings
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => signOut()}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
+              <Link to="/auth">
+                <Button variant="ghost" size="sm">
+                  Sign in
+                </Button>
+              </Link>
+              <Link to="/settings">
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <Settings className="w-5 h-5" />
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </div>
 

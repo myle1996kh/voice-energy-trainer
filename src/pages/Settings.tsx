@@ -27,39 +27,84 @@ export default function Settings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [isAllowed, setIsAllowed] = useState(false);
   const [metrics, setMetrics] = useState<MetricSetting[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const fetchSettings = useCallback(async () => {
-  try {
-    setIsLoading(true);
+    try {
+      setIsLoading(true);
 
-    const { data, error } = await supabase
-      .from('metric_settings')
-      .select('*')
-      .order('metric_id');
+      // 1. Check if customization is allowed
+      const { data: appSettings, error: appSettingsError } = await (supabase as any)
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'allow_user_metrics_customization')
+        .single();
 
-    if (error) throw error;
+      const allowed = appSettings?.value === true;
+      setIsAllowed(allowed);
 
-    const mapped = (data || []).map((row: any) => ({
-      ...row,
-      enabled: row.weight > 0,
-    }));
+      if (!allowed) {
+        setIsLoading(false);
+        return;
+      }
 
-    setMetrics(mapped);
-    setHasChanges(false);
-  } catch (error: any) {
-    console.error('Error fetching settings:', error);
-    toast({
-      variant: 'destructive',
-      title: 'Error loading settings',
-      description: error.message
-    });
-  } finally {
-    setIsLoading(false);
-  }
-}, [toast]);
+      // 2. Fetch user's existing settings
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({ title: 'Error', description: 'You must be logged in.' });
+        return;
+      }
+
+      const { data: userSettings, error: userSettingsError } = await (supabase as any)
+        .from('user_metric_settings')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (userSettingsError) throw userSettingsError;
+
+      // 3. If user has settings, load them. Else load global defaults to start with.
+      if (userSettings && userSettings.length > 0) {
+        // Map to our state structure
+        const mappedSettings = userSettings.map((s: any) => ({
+          ...s,
+          enabled: s.weight > 0 // Logic: if weight > 0, it's enabled
+        }));
+        setMetrics(mappedSettings);
+        console.log('Loaded user custom settings:', mappedSettings);
+      } else {
+        // Load defaults from valid metric_settings (admin config)
+        const { data: adminSettings, error: adminError } = await supabase
+          .from('metric_settings')
+          .select('*');
+
+        if (adminError) throw adminError;
+
+        if (adminSettings) {
+          const defaults = adminSettings.map((s: any) => ({
+            ...s,
+            id: '', // New rows will be created
+            metric_id: s.metric_id, // Ensure metric_id is preserved
+            enabled: s.weight > 0
+          }));
+          setMetrics(defaults);
+          console.log('Loaded admin settings as defaults:', defaults);
+        }
+      }
+
+    } catch (error: any) {
+      console.error('Error fetching settings:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error loading settings',
+        description: error.message
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
 
   useEffect(() => {
     fetchSettings();
@@ -140,25 +185,32 @@ export default function Settings() {
   const saveSettings = async () => {
     try {
       setIsSaving(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Auto-rebalance weights to 100% before saving
       const rebalanced = rebalanceWeights(metrics);
       setMetrics(rebalanced);
 
+      // Upsert into user_metric_settings
       const updates = rebalanced.map(m => ({
+        user_id: user.id,
         metric_id: m.metric_id,
         weight: m.enabled ? m.weight : 0,
         enabled: m.enabled,
         min_threshold: m.min_threshold,
         ideal_threshold: m.ideal_threshold,
         max_threshold: m.max_threshold,
-        method: m.method,
+        method: m.method
       }));
 
-      const { error } = await supabase
-        .from('metric_settings')
-        .upsert(updates, { onConflict: 'metric_id' });
+      const { error } = await (supabase as any)
+        .from('user_metric_settings')
+        .upsert(updates, { onConflict: 'user_id,metric_id' });
 
       if (error) throw error;
 
+      // Update localStorage to reflect new user settings immediately
       const localConfig = rebalanced.map(m => ({
         id: m.metric_id,
         weight: m.enabled ? m.weight : 0,
@@ -170,11 +222,14 @@ export default function Settings() {
         },
         method: m.method,
       }));
-
       localStorage.setItem('metricConfig', JSON.stringify(localConfig));
+      console.log('💾 Saved user settings to localStorage metricConfig');
+
       toast({ title: 'Success', description: 'Settings saved successfully.' });
       setHasChanges(false);
+      // Re-fetch to get IDs
       fetchSettings();
+
     } catch (error: any) {
       console.error('Error saving settings:', error);
       toast({
@@ -186,10 +241,24 @@ export default function Settings() {
       setIsSaving(false);
     }
   };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAllowed) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 text-center">
+        <h1 className="text-2xl font-bold mb-2">Settings Locked</h1>
+        <p className="text-muted-foreground mb-4">Metrics customization is currently managed by administrators.</p>
+        <Button onClick={() => navigate('/')}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Dashboard
+        </Button>
       </div>
     );
   }

@@ -16,10 +16,12 @@ ON CONFLICT (key) DO NOTHING;
 ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
 
 -- Allow everyone to read app_settings
+DROP POLICY IF EXISTS "Allow public read access" ON public.app_settings;
 CREATE POLICY "Allow public read access" ON public.app_settings
     FOR SELECT USING (true);
 
 -- Allow only admins to update app_settings
+DROP POLICY IF EXISTS "Allow admin update" ON public.app_settings;
 CREATE POLICY "Allow admin update" ON public.app_settings
     FOR UPDATE USING (
         auth.uid() IN (
@@ -47,18 +49,22 @@ CREATE TABLE IF NOT EXISTS public.user_metric_settings (
 ALTER TABLE public.user_metric_settings ENABLE ROW LEVEL SECURITY;
 
 -- Allow users to read their own settings
+DROP POLICY IF EXISTS "Users can read own settings" ON public.user_metric_settings;
 CREATE POLICY "Users can read own settings" ON public.user_metric_settings
     FOR SELECT USING (auth.uid() = user_id);
 
 -- Allow users to insert their own settings
+DROP POLICY IF EXISTS "Users can insert own settings" ON public.user_metric_settings;
 CREATE POLICY "Users can insert own settings" ON public.user_metric_settings
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Allow users to update their own settings
+DROP POLICY IF EXISTS "Users can update own settings" ON public.user_metric_settings;
 CREATE POLICY "Users can update own settings" ON public.user_metric_settings
     FOR UPDATE USING (auth.uid() = user_id);
 
 -- Allow users to delete their own settings
+DROP POLICY IF EXISTS "Users can delete own settings" ON public.user_metric_settings;
 CREATE POLICY "Users can delete own settings" ON public.user_metric_settings
     FOR DELETE USING (auth.uid() = user_id);
 

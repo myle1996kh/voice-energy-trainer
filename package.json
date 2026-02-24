@@ -1,5 +1,5 @@
 {
-  "name": "voice-energy-trainer",
+  "name": "vite_react_shadcn_ts",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,8 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "deploy:firebase": "npm run build && firebase deploy --only hosting"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@deepgram/sdk": "^4.11.3",
