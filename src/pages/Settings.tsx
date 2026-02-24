@@ -3,12 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2, Save, ArrowLeft, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { MetricSettingsCard, MetricSetting } from '@/components/MetricSettingsCard';
 import { MetricWeightDistribution } from '@/components/MetricWeightDistribution';
 import { CalibrationWizard } from '@/components/CalibrationWizard';
 import { CalibrationTest } from '@/components/CalibrationTest';
 import { rebalanceWeights } from '@/lib/metricsUtils';
+import { useAuth } from '@/hooks/useAuth';
+import { useDisplayName } from '@/hooks/useDisplayName';
 
 const METRIC_LABELS: Record<string, { name: string; description: string; unit: string; color: string; category: 'audio' | 'video' }> = {
   // Audio metrics
@@ -27,10 +31,18 @@ export default function Settings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [nicknameInput, setNicknameInput] = useState('');
   const [isAllowed, setIsAllowed] = useState(false);
   const [metrics, setMetrics] = useState<MetricSetting[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { profile, updateProfile } = useAuth();
+  const { displayName, setDisplayName } = useDisplayName();
+
+  useEffect(() => {
+    const current = profile?.display_name?.trim() || displayName.trim();
+    setNicknameInput(current);
+  }, [profile?.display_name, displayName]);
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -242,6 +254,35 @@ export default function Settings() {
     }
   };
 
+  const saveNickname = async () => {
+    try {
+      const trimmed = nicknameInput.trim();
+      if (!trimmed) {
+        toast({
+          variant: 'destructive',
+          title: 'Nickname required',
+          description: 'Please enter a nickname.',
+        });
+        return;
+      }
+
+      const { error } = await updateProfile({ display_name: trimmed });
+      if (error) throw error;
+
+      setDisplayName(trimmed);
+      toast({
+        title: 'Nickname saved',
+        description: `Updated to "${trimmed}".`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to save nickname',
+        description: error.message || 'Please try again.',
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -283,6 +324,29 @@ export default function Settings() {
           {/* Top Save Action is redundant if we have bottom actions, but good for mobile? 
                 Actually, let's keep the main actions near the visualization like Admin panel 
             */}
+        </div>
+
+        {/* Nickname Settings */}
+        <div className="bg-card border rounded-lg p-4 space-y-3">
+          <div>
+            <h2 className="text-base font-semibold">Your Nickname</h2>
+            <p className="text-sm text-muted-foreground">
+              This name is used to label your training progress.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-end">
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="nickname">Nickname</Label>
+              <Input
+                id="nickname"
+                value={nicknameInput}
+                maxLength={30}
+                placeholder="Enter your nickname"
+                onChange={(e) => setNicknameInput(e.target.value)}
+              />
+            </div>
+            <Button onClick={saveNickname}>Save Nickname</Button>
+          </div>
         </div>
 
         {/* Device Calibration */}
