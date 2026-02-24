@@ -24,9 +24,10 @@ export async function transcribeAudio(
 ): Promise<DeepgramTranscription> {
     // Get Supabase URL from environment
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-    if (!supabaseUrl) {
-        throw new Error('Supabase URL not configured. Please add VITE_SUPABASE_URL to .env file.');
+    if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error('Supabase config missing. Please add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY to .env file.');
     }
 
     try {
@@ -44,6 +45,10 @@ export async function transcribeAudio(
             method: 'POST',
             headers: {
                 'Content-Type': 'application/octet-stream',
+                // Edge Functions with JWT verification enabled require auth headers.
+                // For no-login flow, use the public anon/publishable key token.
+                'apikey': supabaseAnonKey,
+                'Authorization': `Bearer ${supabaseAnonKey}`,
             },
             body: arrayBuffer,
         });
