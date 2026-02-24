@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, ChevronLeft, ChevronRight, BarChart3, Shield } from 'lucide-react';
+import { Settings, ChevronLeft, ChevronRight, BarChart3 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { ResultsView } from '@/components/ResultsView';
@@ -267,12 +267,6 @@ export default function Index() {
             <Button variant="ghost" size="sm">
               <BarChart3 className="w-4 h-4 mr-2" />
               Progress
-            </Button>
-          </Link>
-          <Link to="/admin">
-            <Button variant="ghost" size="sm">
-              <Shield className="w-4 h-4 mr-2" />
-              Admin
             </Button>
           </Link>
           <Link to="/settings">
