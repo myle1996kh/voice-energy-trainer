@@ -12,6 +12,7 @@ import { CalibrationTest } from '@/components/CalibrationTest';
 import { rebalanceWeights } from '@/lib/metricsUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { useDisplayName } from '@/hooks/useDisplayName';
+import { trackEvent } from '@/lib/analytics';
 
 const METRIC_LABELS: Record<string, { name: string; description: string; unit: string; color: string; category: 'audio' | 'video' }> = {
   // Audio metrics
@@ -273,6 +274,7 @@ export default function Settings() {
         title: 'Nickname saved',
         description: `Updated to "${trimmed}".`,
       });
+      trackEvent('nickname_saved');
     } catch (error: any) {
       toast({
         variant: 'destructive',
