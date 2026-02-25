@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { MetricSettingsCard, MetricSetting } from '@/components/MetricSettingsCard';
-import { MetricWeightDistribution } from '@/components/MetricWeightDistribution';
 import { CalibrationWizard } from '@/components/CalibrationWizard';
 import { CalibrationTest } from '@/components/CalibrationTest';
 import { rebalanceWeights } from '@/lib/metricsUtils';
@@ -355,55 +354,7 @@ export default function Settings() {
         {/* Test Calibration */}
         <CalibrationTest />
 
-        {/* Weight Distribution Visualization */}
-        <MetricWeightDistribution metrics={metrics} metricLabels={METRIC_LABELS} />
-
-        {/* Actions Bar */}
-        <div className="flex flex-wrap gap-2 justify-between items-center bg-muted/30 p-4 rounded-lg border">
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleRebalance} disabled={totalWeight === 100}>
-              Rebalance Weights
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleReset} className="text-muted-foreground hover:text-foreground">
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Reset to Defaults
-            </Button>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={saveSettings} disabled={!hasChanges || isSaving}>
-              {isSaving ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Changes
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          {metrics.map((metric, index) => {
-            const label = METRIC_LABELS[metric.metric_id];
-            if (!label) return null;
-
-            return (
-              <MetricSettingsCard
-                key={metric.metric_id}
-                metric={metric}
-                label={label}
-                onToggle={(id, checked) => toggleMetric(index, checked)}
-                onWeightChange={(id, val) => handleWeightChange(index, val)}
-                onThresholdChange={(id, field, val) => handleThresholdChange(index, field, val)}
-                onMethodChange={(id, method) => handleMethodChange(index, method)}
-              />
-            );
-          })}
-        </div>
+        {/* Weight score controls hidden by request */}
       </div>
     </div>
   );
